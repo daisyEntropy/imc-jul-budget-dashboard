@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>7월 국내 IMC 예산 대시보드</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#F7F6F2;
+    --card:#FFFFFF;
+    --border:#E5E3DB;
+    --text:#2C2C2A;
+    --text-sub:#5F5E5A;
+    --text-mute:#888780;
+    --teal:#1D9E75;
+    --teal-bg:#E1F5EE;
+    --teal-dark:#085041;
+    --coral:#D85A30;
+    --coral-bg:#FAECE7;
+    --coral-dark:#712B13;
+    --purple:#7F77DD;
+    --purple-bg:#EEEDFE;
+    --purple-dark:#3C3489;
+    --amber:#BA7517;
+    --amber-bg:#FAEEDA;
+    --amber-dark:#633806;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    padding:32px 20px 60px;
+  }
+  .wrap{max-width:960px; margin:0 auto;}
+  header{margin-bottom:24px;}
+  header .eyebrow{font-size:13px; color:var(--text-mute); margin:0 0 4px;}
+  header h1{font-size:22px; font-weight:600; margin:0 0 6px;}
+  header .total{font-size:36px; font-weight:700; margin:0;}
+  header .total span{font-size:16px; font-weight:500; color:var(--text-sub); margin-left:8px;}
+
+  .metrics{
+    display:grid;
+    grid-template-columns:repeat(4, 1fr);
+    gap:12px;
+    margin-bottom:20px;
+  }
+  .metric{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:16px 18px;
+  }
+  .metric .label{font-size:13px; color:var(--text-sub); margin:0 0 6px;}
+  .metric .value{font-size:22px; font-weight:700; margin:0;}
+  .metric .sub{font-size:12px; color:var(--text-mute); margin:4px 0 0;}
+
+  .row{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:16px;
+    margin-bottom:16px;
+  }
+  .card{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:20px 22px;
+  }
+  .card h2{
+    font-size:15px;
+    font-weight:600;
+    margin:0 0 14px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .chart-box{position:relative; height:190px;}
+
+  .legend{margin-top:14px; display:flex; flex-direction:column; gap:8px;}
+  .legend-row{display:flex; align-items:center; justify-content:space-between; font-size:13px;}
+  .dot{width:9px; height:9px; border-radius:50%; display:inline-block; margin-right:7px;}
+  .legend-row .name{display:flex; align-items:center;}
+  .legend-row .val{color:var(--text-sub);}
+
+  .concept-legend{display:flex; flex-direction:column; gap:6px; margin-bottom:10px; font-size:12px; color:var(--text-sub);}
+  .concept-legend .item{display:flex; align-items:center; gap:6px;}
+
+  .list-row{
+    display:flex; justify-content:space-between; align-items:center;
+    font-size:13px; padding:10px 0; border-bottom:1px solid var(--border);
+  }
+  .list-row:last-child{border-bottom:none; padding-bottom:0;}
+  .list-row .name{font-weight:500;}
+  .list-row .amt{color:var(--text-sub);}
+
+  .badge{
+    font-size:11px; padding:3px 10px; border-radius:20px; font-weight:500;
+  }
+  .badge-purple{background:var(--purple-bg); color:var(--purple-dark);}
+  .badge-teal{background:var(--teal-bg); color:var(--teal-dark);}
+  .badge-amber{background:var(--amber-bg); color:var(--amber-dark);}
+
+  .card-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;}
+  .card-head h2{margin:0;}
+
+  .note{font-size:12px; color:var(--text-mute); margin:16px 2px 0;}
+
+  .section{background:var(--card); border:1px solid var(--border); border-radius:12px; padding:22px 24px; margin-bottom:16px;}
+  .section > h2{font-size:16px; font-weight:600; margin:0 0 18px;}
+
+  .concept-block{margin-bottom:22px;}
+  .concept-block:last-child{margin-bottom:0;}
+  .concept-title{display:flex; align-items:center; gap:10px; margin:0 0 12px;}
+  .concept-title .name{font-size:14px; font-weight:600;}
+  .concept-title .desc{font-size:12px; color:var(--text-sub);}
+
+  .creator-grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(260px,1fr)); gap:12px;}
+  .creator-card{border:1px solid var(--border); border-radius:10px; padding:14px 16px; background:#FCFCFA;}
+  .creator-head{display:flex; justify-content:space-between; align-items:baseline; gap:8px; margin-bottom:8px;}
+  .creator-head a{font-size:14px; font-weight:600; color:var(--text); text-decoration:none;}
+  .creator-head a:hover{text-decoration:underline;}
+  .creator-head a .ext{font-size:11px; font-weight:400; color:var(--text-mute); margin-left:2px;}
+  .creator-price{font-size:12px; color:var(--text-sub); white-space:nowrap;}
+  .creator-guide{font-size:13px; line-height:1.6; margin:0 0 8px; padding:9px 11px; border-radius:8px; border-left:3px solid var(--border);}
+  .creator-guide b{font-weight:600;}
+  .creator-point{font-size:12px; color:var(--text-sub); line-height:1.6; margin:0;}
+  .creator-ref{font-size:12px; margin-top:6px;}
+  .creator-ref a{color:var(--text-sub);}
+
+  .guide-teal{background:var(--teal-bg); border-left-color:var(--teal);}
+  .guide-coral{background:var(--coral-bg); border-left-color:var(--coral);}
+  .guide-purple{background:var(--purple-bg); border-left-color:var(--purple);}
+
+  .hook-row{display:flex; gap:12px; flex-direction:column;}
+  .hook-item .label{font-size:12px; color:var(--text-mute); margin:0 0 4px;}
+  .hook-item .text{font-size:13px; margin:0; line-height:1.6;}
+
+  @media (max-width:720px){
+    .metrics{grid-template-columns:repeat(2,1fr);}
+    .row{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <p class="eyebrow">7월 국내 IMC</p>
+    <h1>예산 대시보드</h1>
+    <p class="total">총<span></span>1,108만원</p>
+  </header>
+
+  <div class="metrics">
+    <div class="metric" style="border:1.5px solid var(--teal); position:relative;">
+      <span style="position:absolute; top:12px; right:14px; color:var(--teal-dark); font-size:15px;">★</span>
+      <p class="label">터프 브로우 스컬프쳐</p>
+      <p class="value" style="color:var(--teal-dark);">930만원</p>
+      <p class="sub">5인 · 자동 DM</p>
+    </div>
+    <div class="metric">
+      <p class="label">클리시어 공식몰</p>
+      <p class="value" style="color:var(--purple-dark);">34만원</p>
+      <p class="sub">3인 · 브랜더진</p>
+    </div>
+    <div class="metric">
+      <p class="label">카톡 플러스친구</p>
+      <p class="value" style="color:var(--amber-dark);">144만원</p>
+      <p class="sub">2건 · 건당 72만원</p>
+    </div>
+    <div class="metric">
+      <p class="label">총계</p>
+      <p class="value">1,108만원</p>
+      <p class="sub">3개 캠페인</p>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="card">
+      <h2>예산 구성</h2>
+      <div class="chart-box"><canvas id="donutChart"></canvas></div>
+      <div class="legend" id="donutLegend"></div>
+    </div>
+
+    <div class="card">
+      <h2>터프 브로우 스컬프쳐 인플루언서별 단가</h2>
+      <div class="concept-legend">
+        <div class="item"><span class="dot" style="background:var(--teal);"></span>컨셉A · 이동 중 메이크업 (2인 / 125만원)</div>
+        <div class="item"><span class="dot" style="background:var(--coral);"></span>컨셉B · 전문가 신뢰도 (3인 / 805만원)</div>
+      </div>
+      <div class="chart-box"><canvas id="barChart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="card">
+      <div class="card-head">
+        <h2>클리시어 공식몰 소액 유가협업</h2>
+        <span class="badge badge-purple">브랜더진</span>
+      </div>
+      <div class="list-row"><span class="name">@hacuming</span><span class="amt">11.25만원</span></div>
+      <div class="list-row"><span class="name">@thisis_pero</span><span class="amt">11.25만원</span></div>
+      <div class="list-row"><span class="name">@yooha.eosl</span><span class="amt">11.25만원</span></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2>카카오톡 플러스친구</h2>
+        <span class="badge badge-amber">2건</span>
+      </div>
+      <div class="list-row"><span class="name">클리시어 세트 출시 알림</span><span class="amt">72만원</span></div>
+      <div class="list-row"><span class="name">올리브영 염모제 특가 (7/19)</span><span class="amt">72만원</span></div>
+      <p class="note">※ 카톡플친은 전송 시기에 따라 비용에 소폭 차이가 발생할 수 있습니다.</p>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>터프 브로우 스컬프쳐 · 크리에이터별 소구 포인트 & 가이드</h2>
+
+    <div class="concept-block">
+      <div class="concept-title">
+        <span class="badge badge-teal">컨셉A</span>
+        <span class="name">여행·이동 중 메이크업 꿀템 소구</span>
+        <span class="desc">2인 · 125만원</span>
+      </div>
+      <div class="creator-grid">
+        <div class="creator-card">
+          <div class="creator-head">
+            <a href="http://instagram.com/min9_uri/reels" target="_blank" rel="noopener">@min9_uri <span class="ext">↗</span></a>
+            <span class="creator-price">45만원<br>(2차활용 포함)</span>
+          </div>
+          <p class="creator-guide guide-teal">가이드: 이동 중 급하게 메이크업하는 상황 영상으로 소구</p>
+          <p class="creator-point">2차활용 포함 기준 단가 합리적 / 팝업 방문 등 상황 연출력 좋음</p>
+        </div>
+        <div class="creator-card">
+          <div class="creator-head">
+            <a href="http://instagram.com/na_0yy/reels" target="_blank" rel="noopener">@na_0yy <span class="ext">↗</span></a>
+            <span class="creator-price">80만원<br>(2차활용 포함)</span>
+          </div>
+          <p class="creator-guide guide-teal">가이드: "조수석에서 급하게 메이크업" 앵글로 연출</p>
+          <p class="creator-point">최근 인게이지먼트 추이 매우 좋음, 광고 영상도 일반 콘텐츠와 유사한 반응</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="concept-block">
+      <div class="concept-title">
+        <span class="badge badge-coral" style="background:var(--coral-bg); color:var(--coral-dark);">컨셉B</span>
+        <span class="name">샵쌤 추천템 — 전문가 신뢰도 소구</span>
+        <span class="desc">3인 · 805만원</span>
+      </div>
+      <div class="creator-grid">
+        <div class="creator-card">
+          <div class="creator-head">
+            <a href="http://instagram.com/cassiessie_/reels" target="_blank" rel="noopener">@cassiessie_ <span class="ext">↗</span></a>
+            <span class="creator-price">130만원<br>(2차활용 1개월)</span>
+          </div>
+          <p class="creator-guide guide-coral">가이드: "청담샵 원장이 쟁이는 베네피트 저렴이템" 컨셉</p>
+          <p class="creator-point">직접 콘텐츠를 자주 촬영하는 청담샵 원장 → 자연스러운 톤 기대</p>
+        </div>
+        <div class="creator-card">
+          <div class="creator-head">
+            <a href="http://instagram.com/chae__coo/reels" target="_blank" rel="noopener">@chae__coo <span class="ext">↗</span></a>
+            <span class="creator-price">175만원<br>(2차활용 1개월)</span>
+          </div>
+          <p class="creator-guide guide-coral">가이드: 청담샵 방문 콘텐츠로 촬영, 레퍼런스 영상 참조하여 유사 앵글 요청 예정</p>
+          <p class="creator-point">샵 방문 콘텐츠 문의·인게이지먼트(저장·공유수) 매우 좋았다고 크리에이터 직접 어필, 강남 소재 샵 방문 촬영 가능</p>
+          <p class="creator-ref"><a href="https://www.instagram.com/reel/DUsaGFAkcSD/" target="_blank" rel="noopener">레퍼런스: 플리즈 영상 ↗</a></p>
+        </div>
+        <div class="creator-card">
+          <div class="creator-head">
+            <a href="http://instagram.com/shawn_issure" target="_blank" rel="noopener">@shawn_issure <span class="ext">↗</span></a>
+            <span class="creator-price">500만원<br>(2차활용 PA 포함)</span>
+          </div>
+          <p class="creator-guide guide-coral">가이드: "뷰티과 교수 눈썹은 이거 하나만 쓴다" 소구 + 1+1 기획세트 출시 소식 스토리 노출</p>
+          <p class="creator-point">뷰티과 교수 전문성 / 기존 메이크업 영상 대부분에 스컬프쳐 오가닉 노출 이력 있어 자연스러운 연계 가능</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>클리시어 공식몰 공통 소구 포인트</h2>
+    <div class="hook-row">
+      <div class="hook-item">
+        <p class="label">후킹 포인트</p>
+        <p class="text">"틴트랑 블러셔를 샀더니 파우치에 스크런치까지 준다고?" → 올인원 파우치 구성 강조</p>
+      </div>
+      <div class="hook-item">
+        <p class="label">콜라보 소개</p>
+        <p class="text">클리시어(패션) × 엔트로피(뷰티), "나의 최애 브랜드 2개가 만났다!" 컨셉</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  var donutLabels = ['터프 브로우', '클리시어', '카톡 플친'];
+  var donutData = [930, 34, 144];
+  var donutColors = ['#1D9E75', '#7F77DD', '#BA7517'];
+  var total = donutData.reduce(function(a,b){return a+b;}, 0);
+
+  new Chart(document.getElementById('donutChart'), {
+    type: 'doughnut',
+    data: { labels: donutLabels, datasets: [{ data: donutData, backgroundColor: donutColors, borderWidth: 0 }] },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '68%',
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: function(ctx){ return ctx.label + ': ' + ctx.raw.toLocaleString() + '만원'; } } }
+      }
+    }
+  });
+
+  var legendEl = document.getElementById('donutLegend');
+  donutLabels.forEach(function(label, i){
+    var pct = Math.round(donutData[i] / total * 1000) / 10;
+    var row = document.createElement('div');
+    row.className = 'legend-row';
+    row.innerHTML = '<span class="name"><span class="dot" style="background:' + donutColors[i] + ';"></span>' + label + '</span><span class="val">' + donutData[i].toLocaleString() + '만원 (' + pct + '%)</span>';
+    legendEl.appendChild(row);
+  });
+
+  new Chart(document.getElementById('barChart'), {
+    type: 'bar',
+    data: {
+      labels: ['min9_uri', 'na_0yy', 'cassiessie', 'chae__coo', 'shawn_issure'],
+      datasets: [{
+        data: [45, 80, 130, 175, 500],
+        backgroundColor: ['#1D9E75', '#1D9E75', '#D85A30', '#D85A30', '#D85A30'],
+        borderRadius: 4,
+        barThickness: 18
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: function(ctx){ return ctx.raw.toLocaleString() + '만원'; } } }
+      },
+      scales: {
+        x: { ticks: { color: '#5F5E5A', font: { size: 11 } }, grid: { color: '#EFEDE6' } },
+        y: { ticks: { color: '#5F5E5A', font: { size: 11 } }, grid: { display: false } }
+      }
+    }
+  });
+})();
+</script>
+</body>
+</html>
